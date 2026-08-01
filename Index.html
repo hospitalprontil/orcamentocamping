@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orçamento de Camping</title>
+    <!-- Tailwind CSS para os estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Ocultar as setinhas dos campos de número */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; margin: 0; 
+        }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body class="bg-neutral-100 text-neutral-900 font-sans min-h-screen flex justify-center p-4 md:p-8">
+
+    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[calc(100vh-4rem)]">
+        
+        <!-- Header -->
+        <header class="bg-emerald-700 text-white p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+            <div class="flex items-center gap-3">
+                <i data-lucide="tent" class="w-8 h-8"></i>
+                <div>
+                    <h1 class="text-2xl font-bold">Orçamento de Camping</h1>
+                    <p class="text-emerald-100 text-sm opacity-90">Sua lista salva automaticamente no navegador</p>
+                </div>
+            </div>
+            
+            <div id="header-actions">
+                <!-- O botão de pesquisar todos será renderizado aqui pelo JS -->
+            </div>
+        </header>
+
+        <!-- Lista de Itens -->
+        <div id="list-container" class="flex-1 overflow-y-auto p-4 md:p-6 bg-neutral-50/50 space-y-3">
+            <!-- Os itens serão renderizados aqui -->
+        </div>
+
+        <!-- Rodapé - Total e Input -->
+        <div class="bg-white border-t border-neutral-200 p-4 md:p-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 shrink-0">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-neutral-500 font-medium">Custo Estimado Total:</span>
+                <span class="text-2xl md:text-3xl font-bold text-emerald-700 flex items-center">
+                    <i data-lucide="dollar-sign" class="w-7 h-7 mr-1 opacity-80"></i>
+                    <span id="total-price">0,00</span>
+                </span>
+            </div>
+
+            <form onsubmit="handleAddItem(event)" class="flex gap-2">
+                <input
+                    type="text"
+                    id="main-input"
+                    placeholder="Adicionar novos itens (separe por vírgula)..."
+                    class="flex-1 bg-neutral-100 border border-neutral-300 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all text-neutral-800"
+                />
+                <button
+                    type="submit"
+                    class="bg-neutral-800 hover:bg-neutral-900 text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm"
+                >
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    <span class="hidden sm:inline">Add</span>
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <script>
+        const apiKey = ""; // A chave é injetada automaticamente pelo ambiente
+
+        // Lista imensa inicial para sugestão
+        const defaultCampingList = [
+            "Barraca", "Saco de dormir", "Isolante térmico (EVA)", "Isolante térmico inflável", "Colchão inflável", 
+            "Bomba de ar para colchão", "Lona de chão (Footprint)", "Lona de cobertura (Toldo/Gazebo)", 
+            "Travesseiro de camping", "Cobertor extra / Manta de microfibra", "Cordeletes / Extensores elásticos", 
+            "Espeques extras", "Marreta de borracha", "Kit reparo de barraca", "Manta térmica aluminizada", 
+            "Rede de descanso", "Mosquiteiro", "Fogareiro", "Cartucho de gás extra", "Kit panelas de camping", 
+            "Frigideira", "Chaleira de camping", "Talheres (Garfo, faca, colher)", "Copos / Canecas esmaltadas", 
+            "Pratos de plástico/alumínio", "Faca de corte / Chef", "Tábua de corte", "Caixa térmica (Cooler)", 
+            "Geladeira portátil 12v", "Gelo artificial", "Garrafa térmica", "Filtro de água portátil", 
+            "Pastilhas purificadoras de água", "Esponja", "Detergente biodegradável", "Fósforos longos", "Isqueiro", 
+            "Pederneira", "Abridor de latas e garrafas", "Saca-rolhas", "Cafeteira portátil (Prensa/Italiana)", 
+            "Coador de café", "Pano de prato", "Sacos herméticos (Zip-lock)", "Recipientes para temperos",
+            "Papel alumínio", "Papel toalha", "Grelha portátil", "Espeto para fogueira", "Lanterna de cabeça", 
+            "Lanterna de barraca (Lampião)", "Lanterna de mão tática", "Pilhas extras", "Powerbank", 
+            "Painel solar portátil", "Extensão elétrica", "Adaptador de tomada", "Rádio comunicador (Walkie-talkie)", 
+            "Caixa de som Bluetooth", "Cabos USB extras", "Cadeira de camping dobrável", "Banquinho dobrável", 
+            "Mesa dobrável de camping", "Varal portátil", "Prendedores de roupa", "Tapete para entrada da barraca", 
+            "Guarda-sol", "Chuveiro portátil de acampamento", "Tenda banheiro / Vestiário", "Kit de primeiros socorros", 
+            "Analgésicos e Remédios", "Repelente de insetos (Corpo)", "Repelente de insetos (Ambiente)", 
+            "Protetor solar", "Protetor labial", "Papel higiênico", "Toalha de secagem rápida", "Lenços umedecidos", 
+            "Escova e pasta de dentes", "Sabonete biodegradável", "Shampoo / Condicionador", "Desodorante", 
+            "Álcool em gel", "Sacos de lixo resistentes", "Pá dobrável", "Fita Silver Tape (Reparos)", "Fita isolante",
+            "Canivete suíço", "Alicate multiuso (Leatherman)", "Faca de sobrevivência", "Machadinha / Machado", 
+            "Corda de nylon (Paracord 15m)", "Mochila cargueira", "Mochila de ataque", "Bússola / GPS", 
+            "Apito de emergência", "Capa de chuva / Poncho", "Bota de trilha (Trekking)", "Meias térmicas", 
+            "Casaco corta-vento (Anorak)", "Segunda pele", "Chapéu / Boné", "Óculos de sol", 
+            "Baralho / Jogos", "Binóculos", "Sacos impermeáveis (Dry bag)"
+        ].map((name, i) => ({
+            id: `default-${i}`,
+            query: name,
+            name: name,
+            price: 0,
+            quantity: 1,
+            isUrl: false,
+            status: 'idle'
+        }));
+
+        // Estado da aplicação
+        let items = [];
+        let isGlobalLoading = false;
+
+        // Inicialização
+        function init() {
+            const saved = localStorage.getItem('campingListState');
+            if (saved) {
+                items = JSON.parse(saved);
+            } else {
+                items = [...defaultCampingList];
+            }
+            renderAll();
+        }
+
+        function saveState() {
+            localStorage.setItem('campingListState', JSON.stringify(items));
+        }
+
+        // Funções de Renderização
+        function renderAll() {
+            const container = document.getElementById('list-container');
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-neutral-400 gap-4 opacity-70">
+                        <i data-lucide="shopping-cart" class="w-12 h-12 text-emerald-600/50"></i>
+                        <p class="text-center">Sua lista está vazia.<br/>Adicione itens abaixo!</p>
+                    </div>`;
+            } else {
+                container.innerHTML = items.map(item => generateItemHTML(item)).join('');
+            }
+            updateTotals();
+            lucide.createIcons();
+            scrollToBottom();
+        }
+
+        function updateItemDOM(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            const el = document.getElementById(`item-${id}`);
+            if (el) {
+                el.outerHTML = generateItemHTML(item);
+                lucide.createIcons();
+            }
+            updateTotals();
+            saveState();
+        }
+
+        function generateItemHTML(item) {
+            const isSuccess = item.status === 'success';
+            const bgClass = isSuccess ? 'border-emerald-200 bg-emerald-50/20' : 'border-neutral-200';
+            const icon = item.isUrl ? 'link' : 'tent';
+            const iconColor = item.isUrl ? 'text-blue-500' : 'text-emerald-600';
+            
+            let actionsHTML = '';
+
+            if (item.status === 'idle' || item.status === 'error') {
+                const btnText = item.status === 'error' ? 'Tentar de novo' : 'Pesquisar';
+                actionsHTML += `
+                    <button onclick="searchSingle('${item.id}')" class="flex items-center gap-1.5 text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">${btnText}</span>
+                    </button>
+                `;
+            }
+
+            if (item.status === 'loading') {
+                actionsHTML += `
+                    <div class="flex items-center gap-2 text-emerald-600 text-sm font-medium px-3 py-1.5">
+                        <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                        <span class="hidden sm:inline">Buscando...</span>
+                    </div>
+                `;
+            }
+
+            if (isSuccess) {
+                actionsHTML += `
+                    <div class="flex items-center bg-white rounded-lg border border-emerald-200 h-10 shadow-sm overflow-hidden">
+                        <button onclick="changeQuantity('${item.id}', -1)" ${item.quantity <= 1 ? 'disabled' : ''} class="px-3 h-full text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 disabled:hover:bg-transparent transition-colors font-bold text-lg">-</button>
+                        <input type="number" min="1" value="${item.quantity}" oninput="setQuantity('${item.id}', this.value)" class="w-10 text-center bg-transparent outline-none font-semibold text-emerald-900 text-sm">
+                        <button onclick="changeQuantity('${item.id}', 1)" class="px-3 h-full text-emerald-700 hover:bg-emerald-100 transition-colors font-bold text-lg">+</button>
+                    </div>
+                    <a href="${getProductLink(item)}" target="_blank" class="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-1" title="Ver opções de compra">
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                    </a>
+                    <div class="flex items-center bg-white rounded-lg overflow-hidden border border-emerald-300 focus-within:border-emerald-600 focus-within:ring-1 focus-within:ring-emerald-600 transition-all shadow-sm w-32">
+                        <div class="pl-3 pr-1 text-emerald-700 font-semibold text-sm">R$</div>
+                        <input type="number" oninput="updatePrice('${item.id}', this.value)" value="${item.price || ''}" placeholder="0.00" class="w-full py-2 pr-2 bg-transparent outline-none font-bold text-neutral-800">
+                    </div>
+                `;
+            }
+
+            return `
+                <div id="item-${item.id}" class="bg-white border rounded-xl p-3 shadow-sm flex flex-col sm:flex-row gap-3 items-start sm:items-center transition-all ${bgClass}">
+                    <div class="flex-1 min-w-0 w-full flex items-center gap-2 group">
+                        <div class="shrink-0 p-2 bg-neutral-100 rounded-lg text-neutral-500">
+                            <i data-lucide="${icon}" class="w-4 h-4 ${iconColor}"></i>
+                        </div>
+                        <div class="flex-1 relative">
+                            <input type="text" onchange="updateName('${item.id}', this.value)" value="${item.name}" placeholder="Nome do item ou link..." class="w-full bg-transparent font-medium text-neutral-800 outline-none border-b border-transparent focus:border-emerald-500 py-1 transition-colors pr-6 truncate" title="Clique para editar">
+                            <i data-lucide="edit-3" class="w-3 h-3 absolute right-0 top-1/2 -translate-y-1/2 text-neutral-300 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"></i>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end shrink-0 mt-2 sm:mt-0">
+                        ${actionsHTML}
+                        <div class="w-px h-6 bg-neutral-200 mx-1 hidden sm:block"></div>
+                        <button onclick="removeItem('${item.id}')" class="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir item">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateTotals() {
+            const total = items.reduce((acc, item) => acc + ((Number(item.price) || 0) * (Number(item.quantity) || 1)), 0);
+            document.getElementById('total-price').innerText = total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
+            const pendingCount = items.filter(i => i.status === 'idle').length;
+            const headerActions = document.getElementById('header-actions');
+            
+            if (pendingCount > 0) {
+                headerActions.innerHTML = `
+                    <button onclick="searchAllPending()" ${isGlobalLoading ? 'disabled' : ''} class="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm w-full sm:w-auto justify-center disabled:opacity-70">
+                        <i data-lucide="${isGlobalLoading ? 'loader-2' : 'play'}" class="w-4 h-4 ${isGlobalLoading ? 'animate-spin' : 'fill-emerald-950'}"></i>
+                        Pesquisar ${pendingCount} Pendente${pendingCount > 1 ? 's' : ''}
+                    </button>
+                `;
+            } else {
+                headerActions.innerHTML = '';
+            }
+            lucide.createIcons();
+            saveState();
+        }
+
+        // Interações do Usuário
+        function handleAddItem(e) {
+            e.preventDefault();
+            const input = document.getElementById('main-input');
+            const val = input.value.trim();
+            if (!val) return;
+
+            const rawQueries = val.split(',').map(q => q.trim()).filter(q => q !== '');
+            if (rawQueries.length === 0) return;
+
+            rawQueries.forEach((query, index) => {
+                const isUrl = query.startsWith('http://') || query.startsWith('https://');
+                items.push({
+                    id: Date.now().toString() + '-' + index,
+                    query: query,
+                    name: query,
+                    price: 0,
+                    quantity: 1,
+                    isUrl: isUrl,
+                    status: 'idle'
+                });
+            });
+
+            input.value = '';
+            renderAll();
+        }
+
+        function removeItem(id) {
+            items = items.filter(item => item.id !== id);
+            const el = document.getElementById(`item-${id}`);
+            if (el) el.remove();
+            updateTotals();
+            if(items.length === 0) renderAll(); // Mostra empty state
+        }
+
+        function updateName(id, newName) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            item.name = newName;
+            item.query = newName;
+            item.isUrl = newName.startsWith('http://') || newName.startsWith('https://');
+            item.status = 'idle';
+            item.price = 0;
+            updateItemDOM(id);
+        }
+
+        // Estas funções não chamam renderItem para não perder o foco de digitação
+        function updatePrice(id, val) {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item.price = val;
+                updateTotals();
+            }
+        }
+
+        function setQuantity(id, val) {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item.quantity = Math.max(1, parseInt(val) || 1);
+                updateTotals();
+            }
+        }
+
+        function changeQuantity(id, delta) {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item.quantity = Math.max(1, (item.quantity || 1) + delta);
+                updateItemDOM(id); // Re-renderiza para atualizar botão disabled e input value
+            }
+        }
+
+        function getProductLink(item) {
+            if (item.isUrl) return item.query;
+            return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(item.name)}`;
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('list-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Lógica de API e Busca
+        async function fetchWithRetry(url, options, retries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+        }
+
+        async function getEstimatedPrice(query) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const prompt = `Você é um assistente de compras de equipamentos de camping. O usuário forneceu a seguinte entrada: "${query}". Faça uma pesquisa atualizada na internet brasileira e determine: 1. O nome claro e conciso do produto. 2. O preço médio de mercado atual em BRL. Retorne estritamente em JSON {"nome": "String", "preco": Number}.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                tools: [{ google_search: {} }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: { nome: { type: "STRING" }, preco: { type: "NUMBER" } },
+                        required: ["nome", "preco"]
+                    }
+                }
+            };
+
+            try {
+                const data = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (responseText) {
+                    const parsed = JSON.parse(responseText);
+                    return { success: true, name: parsed.nome, price: parsed.preco };
+                }
+                throw new Error("Resposta inválida");
+            } catch (error) {
+                console.error("Erro ao buscar:", error);
+                return { success: false };
+            }
+        }
+
+        async function searchSingle(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            
+          
